@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Veicoli Usati</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .last-update {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+        }
+        .error {
+            color: red;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Stock Veicoli Usati</h1>
+    <div class="last-update" id="lastUpdate"></div>
+    <div id="loading" class="loading">Caricamento dati in corso...</div>
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="tableContainer"></div>
+
+    <script>
+        // CONFIGURA QUI IL TUO GOOGLE SHEET
+        const SHEET_ID = 'INSERISCI_QUI_L_ID_DEL_TUO_SHEET';
+        const SHEET_NAME = 'Sheet1'; // Modifica se il foglio ha nome diverso
+        
+        async function loadSheetData() {
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+                
+                const response = await fetch(url);
+                const text = await response.text();
+                
+                // Google restituisce i dati in un formato particolare
+                const json = JSON.parse(text.substring(47).slice(0, -2));
+                
+                displayData(json);
+                
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').innerHTML = 
+                    'Errore nel caricamento dei dati: ' + error.message;
+            }
+        }
+
+        function displayData(data) {
+            const container = document.getElementById('tableContainer');
+            const loading = document.getElementById('loading');
+            const lastUpdate = document.getElementById('lastUpdate');
+            
+            loading.style.display = 'none';
+            
+            if (!data.table || !data.table.rows || data.table.rows.length === 0) {
+                container.innerHTML = '<p>Nessun dato disponibile</p>';
+                return;
+            }
+
+            // Crea la tabella
+            let html = '<table>';
+            
+            // Intestazioni
+            html += '<thead><tr>';
+            data.table.cols.forEach(column => {
+                html += `<th>${column.label || ''}</th>`;
+            });
+            html += '</tr></thead>';
+            
+            // Righe dati
+            html += '<tbody>';
+            data.table.rows.forEach(row => {
+                html += '<tr>';
+                row.c.forEach(cell => {
+                    const value = cell ? (cell.v || '') : '';
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            
+            container.innerHTML = html;
+            lastUpdate.textContent = `Ultimo aggiornamento: ${new Date().toLocaleString('it-IT')}`;
+        }
+
+        // Carica i dati quando la pagina si apre
+        document.addEventListener('DOMContentLoaded', loadSheetData);
+        
+        // Aggiorna ogni 5 minuti (opzionale)
+        setInterval(loadSheetData, 300000);
+    </script>
+</body>
+</html>
